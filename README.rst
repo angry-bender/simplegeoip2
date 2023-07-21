@@ -1,13 +1,10 @@
 A Python module and CLI tool that returns IP address ownership and location information based on MaxMind's GeoLite2
-databases
+databases, forked to allow import of a CSV or TXT file and export to CSV or JSON using multithreading. in this case around 200,000 results were parsed in 3 minutes
 
 ::
 
     usage: geoip          [-h] [-d DATABASE_DIRECTORY] [-v]
-                          ip_address [ip_address ...]
-
-    positional arguments:
-      ip_address            One or more IP addresses to look up
+                          ip_address [ip_address ...] --input-file <filename> --output-file <.csv/.json file>     
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -15,6 +12,9 @@ databases
                             Overrides the path to the directory containing MaxMind
                             databases
       -v, --version         show program's version number and exit
+      --input-file          Input file with one IP per line
+      --output-file         output file in CSV or JSON, if CSV is not in file name, then will default to JSON
+      ip_address            One or more IP addresses to look up
 
 Prerequisites
 -------------
