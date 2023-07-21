@@ -50,11 +50,3 @@ Note to Windows users
 
 On Windows, ``pip3`` is ``pip``, regardless if you installed Python 2 or 3. So on Windows, simply
 substitute ``pip`` as an administrator in place of ``sudo pip3``, in the above commands.
-
-
-Bug reports
------------
-
-Please report bugs on the GitHub issue tracker
-
-https://github.com/domainaware/simplegeoip/issues
