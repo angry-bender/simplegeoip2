@@ -82,8 +82,8 @@ class GeoIP:
 
         keys, values = [], []
         for key, value in myOrderedDict.items():
-        keys.append(key)
-        values.append(value)
+            keys.append(key)
+            values.append(value)
 
         with open("geoipout.csv", "w") as outfile:
         csvwriter = csv.writer(outfile)
