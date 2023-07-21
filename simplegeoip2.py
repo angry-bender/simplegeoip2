@@ -81,7 +81,7 @@ class GeoIP:
                                ("country_iso", country_iso), ("latitude", latitude), ("longitude", longitude)])
 
         keys, values = [], []
-        for key, value in myOrderedDict.items():
+        for key, value in results.items():
             keys.append(key)
             values.append(value)
 
