@@ -38,17 +38,11 @@ On Debian or Ubuntu systems, run:
 
 Python 3 installers for Windows and macOS can be found at https://www.python.org/downloads/
 
-To install or upgrade to the latest stable release of checkdmarc on macOS or Linux, run
+Install the requirements
 
 ::
 
-    $ sudo pip3 -U install simplegeoip2
-
-Or, install the latest development release directly from GitHub:
-
-::
-
-    $ sudo pip3 -U install git+https://github.com/domainaware/simplegeoip2.git
+    $ sudo pip3 install -r requirements.txt
 
 
 Note to Windows users
