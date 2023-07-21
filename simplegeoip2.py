@@ -14,7 +14,7 @@ import csv
 import geoip2.database
 
 
-__version__ = "1.0.2"
+__version__ = "1.1.0"
 
 
 class GeoIP:
@@ -25,7 +25,7 @@ class GeoIP:
         """
         Initializes the interface
         Args:
-            dbdir: A path to a directory containing GeoLite2-ASN.mmdb and GeoLite2-ASN.mmdb
+            dbdir: A path to a directory containing GeoLite2-ASN.mmdb and GeoLite2-City.mmdb
         """
         if dbdir:
             self.dbdir = dbdir
@@ -80,30 +80,50 @@ class GeoIP:
                                ("country", country), ("subdivision_iso", subdivision_iso),
                                ("country_iso", country_iso), ("latitude", latitude), ("longitude", longitude)])
 
-        keys, values = [], []
-        for key, value in results.items():
-            keys.append(key)
-            values.append(value)
+        return results
 
-        with open("geoipout.csv", "w") as outfile:
-            csvwriter = csv.writer(outfile)
-            csvwriter.writerow(keys)
-            csvwriter.writerow(values)
+
+def process_ip_addresses(input_file, output_file, database_directory=None):
+    geoip = GeoIP(database_directory)
+    output_data = []
+    
+    with open(input_file, "r") as infile:
+        for line in infile:
+            ip_address = line.strip()
+            if ip_address:
+                result = geoip.lookup(ip_address)
+                output_data.append(result)
+
+    with open(output_file, "w") as outfile:
+        if output_file.endswith(".csv"):
+            csvwriter = csv.DictWriter(outfile, fieldnames=output_data[0].keys())
+            csvwriter.writeheader()
+            csvwriter.writerows(output_data)
+        else:  # Assuming JSON format if not CSV
+            json.dump(output_data, outfile, ensure_ascii=False, indent=2)
+
 
 def _main():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument("ip_address", nargs="+", help="One or more IP addresses to look up")
+    parser.add_argument("ip_address", nargs="*", help="One or more IP addresses to look up")
+    parser.add_argument("-i", "--input-file", help="Path to the file containing IP addresses (one per line)")
+    parser.add_argument("-o", "--output-file", default="geoipout.json", help="Path to the output file")
     parser.add_argument("-d", "--database-directory", help="Overrides the path to the directory containing MaxMind "
                                                            "databases")
     parser.add_argument("-v", "--version", action="version", version=__version__)
     args = parser.parse_args()
-    if len(args.ip_address) == 1:
-        results = GeoIP(args.database_directory).lookup(args.ip_address[0])
+
+    if args.input_file:
+        process_ip_addresses(args.input_file, args.output_file, args.database_directory)
     else:
-        results = []
-        for ip_address in args.ip_address:
-            results.append(GeoIP(args.database_directory).lookup(ip_address))
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+        if len(args.ip_address) == 1:
+            results = GeoIP(args.database_directory).lookup(args.ip_address[0])
+        else:
+            results = []
+            for ip_address in args.ip_address:
+                results.append(GeoIP(args.database_directory).lookup(ip_address))
+        with open(args.output_file, "w") as outfile:
+            print(json.dumps(results, ensure_ascii=False, indent=2), file=outfile)
 
 
 if __name__ == "__main__":
