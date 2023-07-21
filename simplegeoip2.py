@@ -10,13 +10,12 @@ from collections import OrderedDict
 from argparse import ArgumentParser
 import json
 import csv
-from concurrent.futures import ThreadPoolExecutor  # Add this import statement
+from concurrent.futures import ThreadPoolExecutor
 
 import geoip2.database
 
 
 __version__ = "1.2.0"
-
 
 class GeoIP:
     """
