@@ -86,9 +86,9 @@ class GeoIP:
             values.append(value)
 
         with open("geoipout.csv", "w") as outfile:
-        csvwriter = csv.writer(outfile)
-        csvwriter.writerow(keys)
-        csvwriter.writerow(values)
+            csvwriter = csv.writer(outfile)
+            csvwriter.writerow(keys)
+            csvwriter.writerow(values)
 
 def _main():
     parser = ArgumentParser(description=__doc__)
