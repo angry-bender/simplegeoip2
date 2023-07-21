@@ -10,11 +10,12 @@ from collections import OrderedDict
 from argparse import ArgumentParser
 import json
 import csv
+from concurrent.futures import ThreadPoolExecutor
 
 import geoip2.database
 
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 
 class GeoIP:
@@ -52,44 +53,30 @@ class GeoIP:
             ``latitude``, ``longitude``
 
         """
-        with geoip2.database.Reader(self.asndb) as reader:
-            asn_response = reader.asn(ip_address)
-        with geoip2.database.Reader(self.citydb) as reader:
-            city_response = reader.city(ip_address)
+        try:
+            with geoip2.database.Reader(self.asndb) as reader:
+                asn_response = reader.asn(ip_address)
+            with geoip2.database.Reader(self.citydb) as reader:
+                city_response = reader.city(ip_address)
 
-        asn = asn_response.autonomous_system_number
-        organization = asn_response.autonomous_system_organization
-        city = city_response.city.name
-        subdivision = city_response.subdivisions.most_specific.name
-        country = city_response.country.name
-        subdivision_iso = city_response.subdivisions.most_specific.iso_code
-        country_iso = city_response.country.iso_code
-        latitude = city_response.location.latitude
-        longitude = city_response.location.longitude
-        location = []
-        if city:
-            location.append(city)
-        if subdivision:
-            location.append(subdivision)
-        if country:
-            location.append(country)
-        location_string = ", ".join(location)
+            asn = asn_response.autonomous_system_number
+            organization = asn_response.autonomous_system_organization
+            city = city_response.city.name
+            subdivision = city_response.subdivisions.most_specific.name
+            country = city_response.country.name
+            subdivision_iso = city_response.subdivisions.most_specific.iso_code
+            country_iso = city_response.country.iso_code
+            latitude = city_response.location.latitude
+            longitude = city_response.location.longitude
+            location = []
+            if city:
+                location.append(city)
+            if subdivision:
+                location.append(subdivision)
+            if country:
+                location.append(country)
+            location_string = ", ".join(location)
 
-        if self.is_private_ip(ip_address):
-            results = OrderedDict([
-                ("ip_address", ip_address),
-                ("asn", None),
-                ("organization", None),
-                ("location_string", None),
-                ("city", None),
-                ("subdivision", None),
-                ("country", None),
-                ("subdivision_iso", None),
-                ("country_iso", None),
-                ("latitude", None),
-                ("longitude", None)
-            ])
-        else:
             results = OrderedDict([
                 ("ip_address", ip_address),
                 ("asn", asn),
@@ -102,6 +89,21 @@ class GeoIP:
                 ("country_iso", country_iso),
                 ("latitude", latitude),
                 ("longitude", longitude)
+            ])
+
+        except geoip2.errors.AddressNotFoundError:
+            results = OrderedDict([
+                ("ip_address", ip_address),
+                ("asn", None),
+                ("organization", None),
+                ("location_string", None),
+                ("city", None),
+                ("subdivision", None),
+                ("country", None),
+                ("subdivision_iso", None),
+                ("country_iso", None),
+                ("latitude", None),
+                ("longitude", None)
             ])
 
         return results
@@ -120,16 +122,33 @@ class GeoIP:
         return len(parts) == 4 and parts[0] in ('10', '192', '172') and (parts[0] == '10' or (16 <= int(parts[1]) <= 31))
 
 
-def process_ip_addresses(input_file, output_file, database_directory=None):
+def process_ip_address(ip_address, geoip):
+    """
+    Process a single IP address and return the lookup result.
+    """
+    result = geoip.lookup(ip_address)
+    return result
+
+def process_ip_addresses(input_file, output_file, database_directory=None, num_threads=4):
     geoip = GeoIP(database_directory)
     output_data = []
-    
+    ip_addresses = []
+
     with open(input_file, "r") as infile:
         for line in infile:
             ip_address = line.strip()
             if ip_address:
-                result = geoip.lookup(ip_address)
+                ip_addresses.append(ip_address)
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        future_to_ip = {executor.submit(process_ip_address, ip, geoip): ip for ip in ip_addresses}
+        for future in concurrent.futures.as_completed(future_to_ip):
+            ip = future_to_ip[future]
+            try:
+                result = future.result()
                 output_data.append(result)
+            except Exception as e:
+                print(f"Error processing IP address {ip}: {e}")
 
     with open(output_file, "w") as outfile:
         if output_file.endswith(".csv"):
@@ -139,7 +158,6 @@ def process_ip_addresses(input_file, output_file, database_directory=None):
         else:  # Assuming JSON format if not CSV
             json.dump(output_data, outfile, ensure_ascii=False, indent=2)
 
-
 def _main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("ip_address", nargs="*", help="One or more IP addresses to look up")
@@ -147,11 +165,12 @@ def _main():
     parser.add_argument("-o", "--output-file", default="geoipout.json", help="Path to the output file")
     parser.add_argument("-d", "--database-directory", help="Overrides the path to the directory containing MaxMind "
                                                            "databases")
+    parser.add_argument("-t", "--num-threads", type=int, default=4, help="Number of threads for concurrent processing")
     parser.add_argument("-v", "--version", action="version", version=__version__)
     args = parser.parse_args()
 
     if args.input_file:
-        process_ip_addresses(args.input_file, args.output_file, args.database_directory)
+        process_ip_addresses(args.input_file, args.output_file, args.database_directory, args.num_threads)
     else:
         if len(args.ip_address) == 1:
             results = GeoIP(args.database_directory).lookup(args.ip_address[0])
@@ -161,7 +180,6 @@ def _main():
                 results.append(GeoIP(args.database_directory).lookup(ip_address))
         with open(args.output_file, "w") as outfile:
             print(json.dumps(results, ensure_ascii=False, indent=2), file=outfile)
-
 
 if __name__ == "__main__":
     _main()
