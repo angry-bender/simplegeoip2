@@ -9,6 +9,7 @@ from os import path
 from collections import OrderedDict
 from argparse import ArgumentParser
 import json
+import csv
 
 import geoip2.database
 
@@ -79,8 +80,15 @@ class GeoIP:
                                ("country", country), ("subdivision_iso", subdivision_iso),
                                ("country_iso", country_iso), ("latitude", latitude), ("longitude", longitude)])
 
-        return results
+        keys, values = [], []
+        for key, value in myOrderedDict.items():
+        keys.append(key)
+        values.append(value)
 
+        with open("geoipout.csv", "w") as outfile:
+        csvwriter = csv.writer(outfile)
+        csvwriter.writerow(keys)
+        csvwriter.writerow(values)
 
 def _main():
     parser = ArgumentParser(description=__doc__)
