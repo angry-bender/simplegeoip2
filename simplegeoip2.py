@@ -10,7 +10,7 @@ from collections import OrderedDict
 from argparse import ArgumentParser
 import json
 import csv
-from concurrent.futures import ThreadPoolExecutor
+import concurrent
 
 import geoip2.database
 
