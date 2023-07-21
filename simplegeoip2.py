@@ -150,14 +150,14 @@ def process_ip_addresses(input_file, output_file, database_directory=None, num_t
             except Exception as e:
                 print(f"Error processing IP address {ip}: {e}")
 
-    with open(output_file, "w") as outfile:
+    with open(output_file, "w", newline="") as outfile:  # Use 'newline=""' to avoid extra newlines
         if output_file.endswith(".csv"):
             csvwriter = csv.DictWriter(outfile, fieldnames=output_data[0].keys())
             csvwriter.writeheader()
             csvwriter.writerows(output_data)
         else:  # Assuming JSON format if not CSV
             json.dump(output_data, outfile, ensure_ascii=False, indent=2)
-
+            
 def _main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("ip_address", nargs="*", help="One or more IP addresses to look up")
